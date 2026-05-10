@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Royal Tic Tac Toe</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&display=swap" rel="stylesheet"/>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    min-height: 100vh;
+    background: #060611;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Cormorant Garamond', serif;
+    overflow: hidden;
+  }
+
+  /* ── Background layers ── */
+  .bg {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden;
+  }
+  .bg-base {
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at 28% 18%, #0d0928 0%, #060611 60%);
+  }
+  .bg-orb-gold {
+    position: absolute; width: 650px; height: 650px; border-radius: 50%;
+    left: -22%; top: -22%;
+    background: radial-gradient(circle, rgba(212,175,55,0.07) 0%, transparent 65%);
+    animation: bgFloat 9s ease-in-out infinite;
+  }
+  .bg-orb-red {
+    position: absolute; width: 550px; height: 550px; border-radius: 50%;
+    right: -20%; bottom: -20%;
+    background: radial-gradient(circle, rgba(120,18,18,0.13) 0%, transparent 65%);
+    animation: bgFloat 11s ease-in-out infinite 4.5s;
+  }
+  .bg-damask {
+    position: absolute; inset: 0; opacity: 0.028;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Cpath d='M40 10 C50 20 60 20 60 40 C60 60 50 60 40 70 C30 60 20 60 20 40 C20 20 30 20 40 10Z' fill='none' stroke='%23D4AF37' stroke-width='0.8'/%3E%3Ccircle cx='40' cy='40' r='3.5' fill='%23D4AF37' opacity='0.6'/%3E%3Cpath d='M40 0 L40 10 M40 70 L40 80 M0 40 L20 40 M60 40 L80 40' stroke='%23D4AF37' stroke-width='0.5'/%3E%3C/svg%3E");
+  }
+
+  /* ── Main card ── */
+  .app {
+    position: relative; z-index: 1;
+    display: flex; flex-direction: column; align-items: center;
+    width: 100%; max-width: 430px; padding: 0 20px;
+    animation: fadeUp 0.7s cubic-bezier(.4,0,.2,1) both;
+  }
+
+  /* ── Header ── */
+  .crown-wrap { display: flex; justify-content: center; margin-bottom: 6px; }
+  .subtitle {
+    font-family: 'Cinzel', serif; font-size: 9px;
+    color: rgba(212,175,55,0.42); letter-spacing: 7px;
+    text-transform: uppercase; text-align: center; margin-bottom: 7px;
+  }
+  h1 {
+    font-family: 'Cinzel', serif;
+    font-size: clamp(22px, 6vw, 34px); font-weight: 700;
+    letter-spacing: 5px; line-height: 1; text-align: center;
+    background: linear-gradient(135deg, #7a5a0f 0%, #D4AF37 28%, #F5D76E 52%, #D4AF37 74%, #7a5a0f 100%);
+    background-size: 200% auto;
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: shimmer 4s linear infinite;
+  }
+  .header { text-align: center; margin-bottom: 24px; }
+
+  /* ── Ornament line ── */
+  .ornament {
+    display: flex; align-items: center; gap: 8px; margin: 6px 0; width: 100%; max-width: 345px;
+  }
+  .ornament-line {
+    flex: 1; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(212,175,55,0.4), #D4AF37, rgba(212,175,55,0.4), transparent);
+  }
+  .ornament-star { color: #D4AF37; font-size: 12px; opacity: 0.8; flex-shrink: 0; }
+
+  /* ── Scoreboard ── */
+  .scoreboard {
+    display: flex; gap: 14px; margin-bottom: 22px; width: 100%; justify-content: center;
+  }
+  .score-card {
+    flex: 1; max-width: 158px;
+    background: linear-gradient(135deg, rgba(255,255,255,0.015) 0%, rgba(8,6,22,0.5) 100%);
+    border: 1px solid rgba(212,175,55,0.12);
+    border-radius: 12px; padding: 14px 10px; text-align: center;
+    transition: all 0.4s cubic-bezier(.4,0,.2,1);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.02);
+    position: relative; overflow: hidden;
+  }
+  .score-card.active-x {
+    background: linear-gradient(135deg, rgba(212,175,55,0.12) 0%, rgba(8,6,22,0.7) 100%);
+    border-color: rgba(212,175,55,0.4);
+    box-shadow: 0 0 30px rgba(212,175,55,0.16), inset 0 1px 0 rgba(255,255,255,0.05);
+  }
+  .score-card.active-o {
+    background: linear-gradient(135deg, rgba(192,57,43,0.12) 0%, rgba(8,6,22,0.7) 100%);
+    border-color: rgba(192,57,43,0.4);
+    box-shadow: 0 0 30px rgba(192,57,43,0.16), inset 0 1px 0 rgba(255,255,255,0.05);
+  }
+  .score-card .card-glow {
+    position: absolute; inset: 0; pointer-events: none;
+    background: radial-gradient(ellipse at 50% 0%, rgba(212,175,55,0.12) 0%, transparent 70%);
+    opacity: 0; transition: opacity 0.4s;
+  }
+  .score-card.active-x .card-glow { opacity: 1; }
+  .score-card.active-o .card-glow {
+    background: radial-gradient(ellipse at 50% 0%, rgba(192,57,43,0.12) 0%, transparent 70%);
+    opacity: 1;
+  }
+  .score-symbol {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 30px; font-weight: 700; letter-spacing: 2px;
+    line-height: 1; margin-bottom: 4px; transition: text-shadow 0.4s;
+  }
+  .score-card.active-x .score-symbol { color: #D4AF37; text-shadow: 0 0 22px rgba(212,175,55,0.6); }
+  .score-card.active-o .score-symbol { color: #C0392B; text-shadow: 0 0 22px rgba(192,57,43,0.6); }
+  .score-card:not(.active-x):not(.active-o) .score-symbol-x { color: #D4AF37; }
+  .score-card:not(.active-x):not(.active-o) .score-symbol-o { color: #C0392B; }
+  .score-label {
+    font-family: 'Cinzel', serif; font-size: 9px;
+    color: rgba(212,175,55,0.4); letter-spacing: 3px; margin-bottom: 8px;
+    text-transform: uppercase;
+  }
+  .score-value {
+    font-family: 'Cormorant Garamond', serif; font-size: 34px; font-weight: 700;
+    color: rgba(212,175,55,0.6); line-height: 1; transition: all 0.4s;
+  }
+  .score-card.active-x .score-value { color: #D4AF37; text-shadow: 0 0 18px rgba(212,175,55,0.4); }
+  .score-card.active-o .score-value { color: #C0392B; text-shadow: 0 0 18px rgba(192,57,43,0.4); }
+
+  /* ── Turn indicator ── */
+  .turn {
+    margin-bottom: 18px; height: 30px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .turn-dot {
+    width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+    animation: goldPulse 1.6s ease-in-out infinite;
+  }
+  .turn-dot.x-dot { background: #D4AF37; box-shadow: 0 0 10px 2px rgba(212,175,55,0.55); }
+  .turn-dot.o-dot { background: #C0392B; box-shadow: 0 0 10px 2px rgba(192,57,43,0.55); }
+  .turn-text {
+    font-family: 'Cinzel', serif; font-size: 10px; letter-spacing: 3px; text-transform: uppercase;
+  }
+  .turn-text.x-text { color: #D4AF37; }
+  .turn-text.o-text { color: #C0392B; }
+  .turn-text.done-text { color: rgba(212,175,55,0.3); font-size: 9px; }
+
+  /* ── Board wrapper ── */
+  .board-wrap {
+    position: relative; width: 100%; max-width: 345px; aspect-ratio: 1;
+    margin-bottom: 0;
+  }
+  .win-glow {
+    position: absolute; inset: -5px; border-radius: 24px; z-index: 0;
+    filter: blur(12px); opacity: 0;
+    transition: opacity 0.5s;
+    pointer-events: none;
+  }
+  .win-glow.show-x {
+    background: radial-gradient(ellipse, rgba(212,175,55,0.18) 0%, transparent 70%);
+    animation: goldPulse 2.4s ease-in-out infinite; opacity: 1;
+  }
+  .win-glow.show-o {
+    background: radial-gradient(ellipse, rgba(192,57,43,0.18) 0%, transparent 70%);
+    animation: goldPulse 2.4s ease-in-out infinite; opacity: 1;
+  }
+
+  /* ── Board card ── */
+  .board-card {
+    position: relative; width: 100%; height: 100%;
+    background: linear-gradient(145deg, rgba(18,14,48,0.92) 0%, rgba(8,6,24,0.97) 100%);
+    border: 1px solid rgba(212,175,55,0.2);
+    border-radius: 20px;
+    box-shadow: 0 24px 70px rgba(0,0,0,0.75), inset 0 1px 0 rgba(212,175,55,0.08), inset 0 -1px 0 rgba(0,0,0,0.6);
+    overflow: hidden; z-index: 1;
+  }
+  /* Corner accents */
+  .corner { position: absolute; width: 16px; height: 16px; pointer-events: none; z-index: 10; }
+  .corner-tl { top: 10px; left: 10px; border-top: 1px solid rgba(212,175,55,0.38); border-left: 1px solid rgba(212,175,55,0.38); }
+  .corner-tr { top: 10px; right: 10px; border-top: 1px solid rgba(212,175,55,0.38); border-right: 1px solid rgba(212,175,55,0.38); }
+  .corner-bl { bottom: 10px; left: 10px; border-bottom: 1px solid rgba(212,175,55,0.38); border-left: 1px solid rgba(212,175,55,0.38); }
+  .corner-br { bottom: 10px; right: 10px; border-bottom: 1px solid rgba(212,175,55,0.38); border-right: 1px solid rgba(212,175,55,0.38); }
+
+  /* Grid SVG */
+  .grid-svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
+
+  /* ── Cells grid ── */
+  .cells {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    width: 100%; height: 100%; padding: 10px;
+    position: relative; z-index: 2;
+  }
+  .cell {
+    aspect-ratio: 1; width: 100%;
+    background: transparent; border: none; outline: none;
+    cursor: pointer; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.22s, transform 0.22s;
+    position: relative;
+  }
+  .cell:hover:not(:disabled) { background: rgba(212,175,55,0.06); transform: scale(1.04); }
+  .cell:disabled { cursor: default; }
+  .cell.winning { transform: scale(1.07); }
+  .cell.winning-x { background: radial-gradient(circle, rgba(212,175,55,0.14) 0%, transparent 80%); box-shadow: 0 0 32px 2px rgba(212,175,55,0.55); }
+  .cell.winning-o { background: radial-gradient(circle, rgba(192,57,43,0.14) 0%, transparent 80%); box-shadow: 0 0 32px 2px rgba(192,57,43,0.55); }
+
+  .cell-svg { width: 54%; height: 54%; }
+  .cell-svg.pop { animation: popIn 0.3s cubic-bezier(.34,1.56,.64,1) both; }
+
+  /* Win line SVG overlay */
+  .win-line-svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 3; }
+
+  /* ── Result ── */
+  .result-area {
+    margin-top: 22px; height: 65px;
+    display: flex; align-items: center; justify-content: center; width: 100%;
+  }
+  .result-inner { text-align: center; animation: resultReveal 0.5s cubic-bezier(.34,1.56,.64,1) both; }
+  .result-sub {
+    font-family: 'Cinzel', serif; font-size: 9px; letter-spacing: 6px;
+    color: rgba(212,175,55,0.38); margin-bottom: 5px;
+  }
+  .result-main {
+    font-family: 'Cormorant Garamond', serif; font-size: 28px; font-weight: 700; font-style: italic;
+    letter-spacing: 1px;
+  }
+  .result-main.x-win { color: #D4AF37; text-shadow: 0 0 32px rgba(212,175,55,0.7), 0 0 8px rgba(212,175,55,0.4); }
+  .result-main.o-win { color: #C0392B; text-shadow: 0 0 32px rgba(192,57,43,0.7), 0 0 8px rgba(192,57,43,0.4); }
+  .result-main.draw  { color: rgba(212,175,55,0.7); font-size: 26px; }
+
+  /* ── Buttons ── */
+  .btn-row { display: flex; gap: 12px; margin-top: 6px; }
+  .royal-btn {
+    font-family: 'Cinzel', serif; font-size: 11px; letter-spacing: 3px;
+    text-transform: uppercase; border: none;
+    border-radius: 8px; cursor: pointer;
+    padding: 12px 26px; font-weight: 600;
+    transition: all 0.25s cubic-bezier(.4,0,.2,1);
+    position: relative; overflow: hidden;
+  }
+  .royal-btn::before {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.14) 50%, transparent 100%);
+    transform: translateX(-100%); transition: transform 0.5s;
+  }
+  .royal-btn:hover::before { transform: translateX(100%); }
+  .royal-btn:hover  { transform: translateY(-2px); }
+  .royal-btn:active { transform: translateY(0); }
+  .btn-gold {
+    background: linear-gradient(135deg, #7a5a0f 0%, #D4AF37 45%, #F5D76E 68%, #D4AF37 100%);
+    background-size: 200% auto;
+    color: #1a0e00;
+    box-shadow: 0 4px 22px rgba(212,175,55,0.4), inset 0 1px 0 rgba(255,255,255,0.28);
+    animation: shimmer 3.5s linear infinite;
+  }
+  .btn-gold:hover { box-shadow: 0 6px 34px rgba(212,175,55,0.65), inset 0 1px 0 rgba(255,255,255,0.28); }
+  .btn-ghost {
+    background: transparent; color: rgba(212,175,55,0.5);
+    border: 1px solid rgba(212,175,55,0.18);
+  }
+  .btn-ghost:hover { background: rgba(212,175,55,0.06); color: rgba(212,175,55,0.8); border-color: rgba(212,175,55,0.38); }
+
+  /* ── Draws footer ── */
+  .draws-footer { margin-top: 22px; width: 100%; max-width: 345px; }
+  .draws-row { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 8px; }
+  .draws-label { font-family: 'Cinzel', serif; font-size: 9px; color: rgba(212,175,55,0.28); letter-spacing: 4px; }
+  .draws-val   { font-family: 'Cormorant Garamond', serif; font-size: 20px; font-weight: 600; color: rgba(212,175,55,0.48); }
+
+  /* ── Animations ── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(22px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes bgFloat {
+    0%, 100% { transform: translateY(0) scale(1); }
+    50%      { transform: translateY(-20px) scale(1.04); }
+  }
+  @keyframes shimmer {
+    0%   { background-position: -200% center; }
+    100% { background-position:  200% center; }
+  }
+  @keyframes goldPulse {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0.45; }
+  }
+  @keyframes popIn {
+    0%   { transform: scale(0) rotate(-20deg); opacity: 0; }
+    100% { transform: scale(1) rotate(0);      opacity: 1; }
+  }
+  @keyframes drawLine {
+    from { stroke-dashoffset: 500; }
+    to   { stroke-dashoffset: 0; }
+  }
+  @keyframes resultReveal {
+    0%   { opacity: 0; transform: translateY(14px) scale(0.9); }
+    100% { opacity: 1; transform: translateY(0)    scale(1); }
+  }
+</style>
+</head>
+<body>
+
+<!-- Background -->
+<div class="bg">
+  <div class="bg-base"></div>
+  <div class="bg-orb-gold"></div>
+  <div class="bg-orb-red"></div>
+  <div class="bg-damask"></div>
+</div>
+
+<!-- App -->
+<div class="app">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="crown-wrap">
+      <svg viewBox="0 0 60 36" style="width:38px;height:24px">
+        <path d="M5 30 L5 10 L15 22 L30 4 L45 22 L55 10 L55 30 Z"
+          fill="none" stroke="#D4AF37" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"
+          style="filter:drop-shadow(0 0 6px #D4AF3788)"/>
+        <rect x="3" y="30" width="54" height="4" rx="2" fill="#D4AF37" opacity="0.65"/>
+        <circle cx="5"  cy="10" r="3" fill="#D4AF37"/>
+        <circle cx="30" cy="4"  r="3" fill="#D4AF37"/>
+        <circle cx="55" cy="10" r="3" fill="#D4AF37"/>
+      </svg>
+    </div>
+    <div class="subtitle">Royal Edition</div>
+    <h1>TIC · TAC · TOE</h1>
+  </div>
+
+  <!-- Ornament -->
+  <div class="ornament">
+    <div class="ornament-line"></div>
+    <span class="ornament-star">✦</span>
+    <div class="ornament-line"></div>
+  </div>
+
+  <!-- Scoreboard -->
+  <div class="scoreboard" style="margin-top:14px">
+    <div class="score-card active-x" id="card-x">
+      <div class="card-glow"></div>
+      <div class="score-symbol score-symbol-x" style="color:#D4AF37">✕</div>
+      <div class="score-label">PLAYER I</div>
+      <div class="score-value" id="score-x">0</div>
+    </div>
+    <div class="score-card" id="card-o">
+      <div class="card-glow"></div>
+      <div class="score-symbol score-symbol-o" style="color:#C0392B">○</div>
+      <div class="score-label">PLAYER II</div>
+      <div class="score-value" id="score-o">0</div>
+    </div>
+  </div>
+
+  <!-- Turn indicator -->
+  <div class="turn">
+    <div class="turn-dot x-dot" id="turn-dot"></div>
+    <span class="turn-text x-text" id="turn-text">Player I's Turn</span>
+  </div>
+
+  <!-- Board -->
+  <div class="board-wrap">
+    <div class="win-glow" id="win-glow"></div>
+    <div class="board-card">
+      <!-- Corner accents -->
+      <div class="corner corner-tl"></div>
+      <div class="corner corner-tr"></div>
+      <div class="corner corner-bl"></div>
+      <div class="corner corner-br"></div>
+
+      <!-- Grid lines -->
+      <svg class="grid-svg" viewBox="0 0 300 300">
+        <defs>
+          <linearGradient id="lgV" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%"   stop-color="#D4AF37" stop-opacity="0.06"/>
+            <stop offset="30%"  stop-color="#D4AF37" stop-opacity="0.52"/>
+            <stop offset="70%"  stop-color="#D4AF37" stop-opacity="0.52"/>
+            <stop offset="100%" stop-color="#D4AF37" stop-opacity="0.06"/>
+          </linearGradient>
+          <linearGradient id="lgH" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%"   stop-color="#D4AF37" stop-opacity="0.06"/>
+            <stop offset="30%"  stop-color="#D4AF37" stop-opacity="0.52"/>
+            <stop offset="70%"  stop-color="#D4AF37" stop-opacity="0.52"/>
+            <stop offset="100%" stop-color="#D4AF37" stop-opacity="0.06"/>
+          </linearGradient>
+        </defs>
+        <line x1="100" y1="6"   x2="100" y2="294" stroke="url(#lgV)" stroke-width="1"/>
+        <line x1="200" y1="6"   x2="200" y2="294" stroke="url(#lgV)" stroke-width="1"/>
+        <line x1="6"   y1="100" x2="294" y2="100" stroke="url(#lgH)" stroke-width="1"/>
+        <line x1="6"   y1="200" x2="294" y2="200" stroke="url(#lgH)" stroke-width="1"/>
+        <circle cx="100" cy="100" r="2.5" fill="#D4AF37" opacity="0.45"/>
+        <circle cx="200" cy="100" r="2.5" fill="#D4AF37" opacity="0.45"/>
+        <circle cx="100" cy="200" r="2.5" fill="#D4AF37" opacity="0.45"/>
+        <circle cx="200" cy="200" r="2.5" fill="#D4AF37" opacity="0.45"/>
+      </svg>
+
+      <!-- Cells -->
+      <div class="cells" id="cells"></div>
+
+      <!-- Win line overlay -->
+      <svg class="win-line-svg" id="win-line-svg" viewBox="0 0 300 300" style="display:none">
+        <line id="win-line" stroke-width="2.5" stroke-linecap="round" opacity="0.9"
+          stroke-dasharray="500" stroke-dashoffset="500"
+          style="animation:drawLine 0.5s cubic-bezier(.4,0,.2,1) forwards"/>
+      </svg>
+    </div>
+  </div>
+
+  <!-- Result area -->
+  <div class="result-area">
+    <div class="result-inner" id="result-area" style="display:none"></div>
+  </div>
+
+  <!-- Buttons -->
+  <div class="btn-row">
+    <button class="royal-btn btn-gold" id="btn-restart" onclick="restart()">Restart</button>
+    <button class="royal-btn btn-ghost" onclick="fullReset()">Reset All</button>
+  </div>
+
+  <!-- Draws footer -->
+  <div class="draws-footer">
+    <div class="ornament">
+      <div class="ornament-line"></div>
+      <span class="ornament-star">✦</span>
+      <div class="ornament-line"></div>
+    </div>
+    <div class="draws-row">
+      <span class="draws-label">DRAWS</span>
+      <span class="draws-val" id="score-draw">0</span>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  const WINNING_COMBOS = [
+    [0,1,2],[3,4,5],[6,7,8],
+    [0,3,6],[1,4,7],[2,5,8],
+    [0,4,8],[2,4,6]
+  ];
+
+  let board = Array(9).fill(null);
+  let current = 'X';
+  let scores = { X: 0, O: 0, draw: 0 };
+  let gameOver = false;
+  let moves = 0;
+
+  const COLORS = {
+    X: { main: '#D4AF37', glow: 'rgba(212,175,55,0.6)' },
+    O: { main: '#C0392B', glow: 'rgba(192,57,43,0.6)'  }
+  };
+
+  function checkWinner(b) {
+    for (const [a, c, d] of WINNING_COMBOS) {
+      if (b[a] && b[a] === b[c] && b[a] === b[d]) return { winner: b[a], line: [a, c, d] };
+    }
+    if (b.every(Boolean)) return { winner: 'draw', line: [] };
+    return null;
+  }
+
+  function cellSVG(val, winning) {
+    const c = COLORS[val];
+    const glowFilter = winning
+      ? `drop-shadow(0 0 14px ${c.main}) drop-shadow(0 0 4px ${c.main})`
+      : `drop-shadow(0 0 5px ${c.glow})`;
+    if (val === 'X') {
+      return `<svg class="cell-svg pop" viewBox="0 0 64 64" style="filter:${glowFilter}">
+        <g stroke="${COLORS.X.main}" stroke-width="6.5" stroke-linecap="round">
+          <line x1="14" y1="14" x2="50" y2="50"/>
+          <line x1="50" y1="14" x2="14" y2="50"/>
+        </g></svg>`;
+    } else {
+      return `<svg class="cell-svg pop" viewBox="0 0 64 64" style="filter:${glowFilter}">
+        <circle cx="32" cy="32" r="19" fill="none" stroke="${COLORS.O.main}" stroke-width="6.5"/>
+        </svg>`;
+    }
+  }
+
+  function renderCells(winLine) {
+    const container = document.getElementById('cells');
+    container.innerHTML = '';
+    board.forEach((val, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'cell';
+      const isWin = winLine && winLine.includes(i);
+      if (isWin) {
+        btn.classList.add('winning');
+        btn.classList.add(val === 'X' ? 'winning-x' : 'winning-o');
+      }
+      if (val || gameOver) btn.disabled = true;
+      if (val) btn.innerHTML = cellSVG(val, isWin);
+      if (!val && !gameOver) {
+        btn.addEventListener('mouseenter', () => { if (!btn.disabled) btn.style.background = 'rgba(212,175,55,0.06)'; });
+        btn.addEventListener('mouseleave', () => { btn.style.background = ''; });
+      }
+      btn.addEventListener('click', () => handleClick(i));
+      container.appendChild(btn);
+    });
+  }
+
+  function updateScoreCards() {
+    const cx = document.getElementById('card-x');
+    const co = document.getElementById('card-o');
+    cx.className = 'score-card' + (current === 'X' && !gameOver ? ' active-x' : '');
+    co.className = 'score-card' + (current === 'O' && !gameOver ? ' active-o' : '');
+    // keep symbol colours explicit
+    cx.querySelector('.score-symbol').style.color = '#D4AF37';
+    co.querySelector('.score-symbol').style.color = '#C0392B';
+    document.getElementById('score-x').textContent = scores.X;
+    document.getElementById('score-o').textContent = scores.O;
+    document.getElementById('score-draw').textContent = scores.draw;
+  }
+
+  function updateTurn(result) {
+    const dot  = document.getElementById('turn-dot');
+    const text = document.getElementById('turn-text');
+    if (result) {
+      dot.style.display = 'none';
+      text.className = 'turn-text done-text';
+      text.textContent = `${moves} move${moves !== 1 ? 's' : ''} played`;
+    } else {
+      dot.style.display = '';
+      dot.className = 'turn-dot ' + (current === 'X' ? 'x-dot' : 'o-dot');
+      text.className = 'turn-text ' + (current === 'X' ? 'x-text' : 'o-text');
+      text.textContent = current === 'X' ? "Player I's Turn" : "Player II's Turn";
+    }
+  }
+
+  function drawWinLine(line, winner) {
+    if (!line || !line.length) return;
+    const CELL = 100, PAD = 50;
+    const pos = i => ({ x: (i % 3) * CELL + PAD, y: Math.floor(i / 3) * CELL + PAD });
+    const s = pos(line[0]), e = pos(line[2]);
+    const color = COLORS[winner]?.main || '#D4AF37';
+    const svg = document.getElementById('win-line-svg');
+    const l   = document.getElementById('win-line');
+    l.setAttribute('x1', s.x); l.setAttribute('y1', s.y);
+    l.setAttribute('x2', e.x); l.setAttribute('y2', e.y);
+    l.setAttribute('stroke', color);
+    l.style.filter = `drop-shadow(0 0 7px ${color})`;
+    // restart animation
+    l.style.animation = 'none';
+    l.getBoundingClientRect();
+    l.style.animation = 'drawLine 0.5s cubic-bezier(.4,0,.2,1) forwards';
+    svg.style.display = '';
+  }
+
+  function showResult(result) {
+    const area = document.getElementById('result-area');
+    let html = '';
+    if (result.winner === 'draw') {
+      html = `<div class="result-sub">— A NOBLE —</div>
+              <div class="result-main draw">Draw</div>`;
+    } else {
+      const cls = result.winner === 'X' ? 'x-win' : 'o-win';
+      const name = result.winner === 'X' ? 'Player I' : 'Player II';
+      html = `<div class="result-sub">VICTORY TO</div>
+              <div class="result-main ${cls}">${name}</div>`;
+    }
+    area.innerHTML = html;
+    area.style.display = '';
+    // restart animation
+    area.style.animation = 'none';
+    area.getBoundingClientRect();
+    area.style.animation = 'resultReveal 0.5s cubic-bezier(.34,1.56,.64,1) both';
+
+    // win glow
+    const glow = document.getElementById('win-glow');
+    glow.className = 'win-glow';
+    if (result.winner !== 'draw') {
+      setTimeout(() => glow.classList.add(result.winner === 'X' ? 'show-x' : 'show-o'), 50);
+    }
+  }
+
+  function handleClick(i) {
+    if (board[i] || gameOver) return;
+    board[i] = current;
+    moves++;
+    const result = checkWinner(board);
+    if (result) {
+      gameOver = true;
+      scores[result.winner]++;
+      renderCells(result.line);
+      updateTurn(result);
+      updateScoreCards();
+      if (result.line.length) drawWinLine(result.line, result.winner);
+      setTimeout(() => showResult(result), 400);
+      document.getElementById('btn-restart').textContent = 'New Game';
+    } else {
+      current = current === 'X' ? 'O' : 'X';
+      renderCells(null);
+      updateTurn(null);
+      updateScoreCards();
+    }
+  }
+
+  function restart() {
+    board = Array(9).fill(null);
+    current = 'X';
+    gameOver = false;
+    moves = 0;
+    document.getElementById('win-line-svg').style.display = 'none';
+    document.getElementById('result-area').style.display = 'none';
+    document.getElementById('win-glow').className = 'win-glow';
+    document.getElementById('btn-restart').textContent = 'Restart';
+    renderCells(null);
+    updateTurn(null);
+    updateScoreCards();
+  }
+
+  function fullReset() {
+    scores = { X: 0, O: 0, draw: 0 };
+    restart();
+  }
+
+  // Init
+  renderCells(null);
+  updateTurn(null);
+  updateScoreCards();
+</script>
+</body>
+</html>
